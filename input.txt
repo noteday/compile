@@ -1,0 +1,9 @@
+int main(){
+   int a=1;
+   float b=2+a;
+   int a = (1=1)*2;
+   float b= 222();
+   nt saf = a;
+   
+}#
+//判断a是否大于b
