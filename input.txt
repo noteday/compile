@@ -1,7 +1,8 @@
 int main(){
-   int a=1;
+   int a = 2+3*4;
+   int x = (a+b)/c;
    float b=2+a;
-   int a = (1=1)*2;
+   int a = (1+1)*2);
    float b= 222();
    nt saf = a;
    

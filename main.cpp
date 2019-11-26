@@ -10,7 +10,14 @@ typedef struct{
 	int typenum;
 	char * word;
 }WORD;
+struct Quad{
+    char result[8];
+    char ag1[8];
+    char op[8];
+    char ag2[20];
+};
 
+int k=0;  //记录语意分析的临时变量的个数
 WORD* oneword = new WORD;
 char input[1000];
 char token[255] = "";
@@ -24,18 +31,26 @@ int error_row = 0;
 char ch;
 char * rwtab[] = {"main","if","then","while","int","main","else","float","double","return","cout",_KEY_WORDEND };
 FILE *fpout = NULL;
+struct Quad quad[20];   //记录四元式
+int sum=0;   //记录四元式的数量
+int schain = 0; //判断句子串是否正确，0为正确，1为错误
+
 
 WORD * scanner();//扫描,获取到每个单词的种别码
 int Irparser();//程序的判断
 int yucu();//语句串的分析
 int statement();//语句的分析
-int expression();//表达式的判断
-int term();//项的分析
-int factor();//因子的分析
+char * expression();//表达式的判断
+char * term();//项的分析
+char * factor();//因子的分析
 char m_getch();
+char * newtemp();//获得一个临时变量名
+void emit(char*result,char * arg1,char * op,char * arg2);//新增一个四元式
+char *myitoa(int num,char *str,int radix) ;  //整数转换成字符串
 char output[255];
 
 int main(){
+   
     int over=1;
     //以“#”结束
     p_input=0;
@@ -66,7 +81,13 @@ int main(){
     p_input=0;
     oneword=scanner();
     Irparser();
-    
+
+    printf("语意分析：\n");
+    for (int i = 0; i < sum; i++){
+        /* code */
+        printf("(%d):(%s,%s,%s,%s)\n",i+1,quad[i].result,quad[i].ag1,quad[i].op,quad[i].ag2);
+    }
+
     //结束提示
     printf("\npress q to exit:");
     scanf("%[^q]s",input);
@@ -413,10 +434,9 @@ int Irparser(){
 }
 
 int yucu(){  //语句串分析
-
+    
     statement();//对语句串的判断转换成对语句的判断
     while(oneword->typenum == 26){//  ；的种别码
-    
         oneword = scanner();
         check_enter();//判断是否读取到回车
         statement();
@@ -426,7 +446,7 @@ int yucu(){  //语句串分析
         row++;
         oneword = scanner();
         if(oneword->typenum != 6 && oneword->typenum != 0){//读取到的是其他单词，说明缺少了分隔符
-
+        
             printf("第%d行：缺少分隔符\n",row-1);
             error_row++;//错的个数增加1
             kk=1;//标志是否已经出错了
@@ -448,14 +468,22 @@ int yucu(){  //语句串分析
 
 int statement(){//不同语句的判断：赋值语句，分支，循环
     //printf("%s",oneword->word);
-
+    char tt[8],eplace[8];
     if(oneword->typenum == 5||oneword->typenum == 8){   //int float的赋值语句判断
         oneword= scanner();
         if(oneword->typenum==10){ //变量判断
+            strcpy(tt,oneword->word);
             oneword = scanner();
             if(oneword->typenum == 25){  // “=”单词种别码是18
+                
                 oneword = scanner();
-                expression();//读取到赋值号之后进行表达式的判断
+                strcpy(eplace,expression());//读取到赋值号之后进行表达式的判断
+                if(schain==0){
+                    emit(tt,eplace,"","");
+                }else{
+                    schain=0;
+                }
+               
             }else{//读取到的赋值号不是=，报错
                 printf("第%d行：赋值号错误\n",row);
                 error_row++;//出错的个数加1
@@ -466,6 +494,8 @@ int statement(){//不同语句的判断：赋值语句，分支，循环
             }
         }
         
+    }else if(oneword->typenum==){
+
     }else if(oneword->typenum == 33 || oneword->typenum == 0){
         return 0;
     }else if(oneword->typenum==50){     //分号下一行语句是空行
@@ -481,32 +511,76 @@ int statement(){//不同语句的判断：赋值语句，分支，循环
     return 0;
 }
 
-int expression(){//表达式的分析
-    term();
+char * expression(){//表达式的分析
+    char *tp,*ep2,*eplace,*tt;
+    tp = (char *)malloc(12);
+    ep2 = (char *)malloc(12);
+    eplace = (char *)malloc(12);
+    tt = (char *)malloc(12);
+
+    strcpy(eplace,term());
     while(oneword->typenum == 13 || oneword->typenum == 14){  //+，-
+        if(oneword->typenum==13){
+            strcpy(tt,"+");
+        }else{
+            strcpy(tt,"-");
+        }
         oneword = scanner();
-        term();
+        strcpy(ep2,term());
+        strcpy(tp,newtemp());
+        emit(tp,eplace,tt,ep2);
+        strcpy(eplace,tp);
+
     }
-    return 0;
+    return eplace;
 }
 
-int term(){//项的判断
+char* term(){//项的判断
 
-    factor();//转入到因子的判断中
+    char *tp,*ep2,*eplace,*tt;
+    tp = (char *)malloc(12);
+    ep2 = (char *)malloc(12);
+    eplace = (char *)malloc(12);
+    tt = (char *)malloc(12);
+
+    strcpy(eplace,factor());//转入到因子的判断中
     while(oneword->typenum == 15 || oneword->typenum == 16){//*，/
+        if(oneword->typenum==15){
+            strcpy(tt,"*");
+        }else{
+            strcpy(tt,"/");
+        }
         oneword = scanner();
-        factor();//出现乘除之后继续进行因子的判断
+        strcpy(ep2,factor()); //出现乘除之后继续进行因子的判断
+        strcpy(tp,newtemp());
+        emit(tp,eplace,tt,ep2);
+        strcpy(eplace,tp);
     }
-    return 0;
+    return eplace;
 }
 
-int factor(){//因子的判断
-
-    if(oneword->typenum == 10 || oneword->typenum == 11)   //字符串或者数字串
+char * factor(){//因子的判断
+    char *fplace;
+    fplace=(char *)malloc(12);
+    strcpy(fplace,"");
+    if(oneword->typenum == 10 || oneword->typenum == 11){   //字符串或者数字串
+        strcpy(fplace,oneword->word);
         oneword = scanner();
+        if(oneword->typenum == 27){  //字符串或者数字串后面直接跟括号而没有运算符
+            printf("第%d行：缺少运算符错误\n",row);
+            error_row++;//出错个数加1
+            kk=1;
+            error_enter();
+            oneword = scanner();
+            schain=1;
+            yucu();
+            
+        }
+    }
     else if(oneword->typenum == 27){   //(
+        myitoa(sum,fplace,10);
         oneword = scanner();
-        expression();
+        strcpy(fplace,expression());
         if(oneword->typenum==28){
             oneword = scanner();
         }else{
@@ -527,5 +601,59 @@ int factor(){//因子的判断
         oneword = scanner();
         yucu();
     }
-    return 0;
+    return fplace;
+}
+
+char *myitoa(int num,char *str,int radix) {  //整数转换成字符串
+	/* 索引表 */ 
+	char index[]="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"; 
+	unsigned unum; /* 中间变量 */ 
+	int i=0,j,k; 
+	/* 确定unum的值 */ 
+	if(radix==10&&num<0) /* 十进制负数 */ 
+	{ 
+		unum=(unsigned)-num; 
+		str[i++]='-'; 
+	} 
+	else unum=(unsigned)num; /* 其它情况 */ 
+	/* 逆序 */ 
+	do  
+	{ 
+		str[i++]=index[unum%(unsigned)radix]; 
+		unum/=radix; 
+	}while(unum); 
+	str[i]='\0'; 
+	/* 转换 */ 
+	if(str[0]=='-') k=1; /* 十进制负数 */ 
+	else k=0; 
+	/* 将原来的“/2”改为“/2.0”，保证当num在16~255之间，radix等于16时，也能得到正确结果 */ 
+	char temp; 
+	for(j=k;j<=(i-k-1)/2.0;j++) 
+	{ 
+		temp=str[j]; 
+		str[j]=str[i-j-1]; 
+		str[i-j-1]=temp; 
+	} 
+	return str; 
+} 
+
+char * newtemp(){  //生成新的临时变量
+    char *p;
+    char m[8];
+    p= (char *)malloc(8);
+    k++;
+    myitoa(k,m,10);
+    strcpy(p+1,m);
+    p[0]='t';
+
+    return p;
+}
+
+void emit(char*result,char * arg1,char * op,char * arg2)  {
+
+    sprintf(quad[sum].op,op);
+    sprintf(quad[sum].ag1,arg1);
+    sprintf(quad[sum].ag2,arg2);
+    sprintf(quad[sum].result,result);
+    sum++;
 }
