@@ -1,10 +1,8 @@
 int main(){
-   int a = 2+3*4;
-   int x = (a+b)/c;
-   float b=2+a;
-   int a = (1+1)*2);
-   float b= 222();
-   nt saf = a;
-   
+   if(a+b>4){
+      int c=4+3;
+      int c=4+3;
+   }
+   int c=4+3;
 }#
 //判断a是否大于b
